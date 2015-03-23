@@ -1,0 +1,21 @@
+#! /bin/sh
+# http://stackoverflow.com/a/9855802/4324545
+# run this with:
+#    GIT_EXTERNAL_DIFF=<name of script> git diff ...
+#
+case $# in
+1) "unmerged file $@, can't show you line numbers"; exit 1;;
+7) ;;
+*) echo "I don't know what to do, help!"; exit 1;;
+esac
+
+path=$1
+old_file=$2
+old_hex=$3
+old_mode=$4
+new_file=$5
+new_hex=$6
+new_mode=$7
+
+printf '%s: ' $path
+diff $old_file $new_file 
