@@ -1,0 +1,17 @@
+#!/bin/bash
+
+commit1=`echo "$1" | grep -Po '^[^:]*'`
+commit2=`echo "$1" | grep -Po '(?<=:).*$'`
+path=$2
+
+if ! git -C `dirname "$path"` merge-base --is-ancestor $commit1 $commit2
+then
+	echo "$commit1 is not ancestor of $commit2"
+	exit 1
+fi
+
+for f in `find $path`
+do
+	echo -n "$f "
+	git -C `dirname "$path"` log -p -w --word-diff -U0 $commit1..$commit2 -- $f | tr -d '\r' | grep -Poc '\[\-.+?\-\]\{\+.+?\+\}|\{\+.+?\+\}|\[\-.+?\-\]'
+done
