@@ -5,16 +5,12 @@ commit2=`echo "$1" | grep -Po '(?<=:).*$'`
 path=$2
 realpath=`readlink -m $path`
 
-echo "! realpath = $realpath"
-
 if [ ${path: -1} = "/" ]
 then
 	dir=$realpath"/"
 else
 	dir=`dirname $realpath`
 fi
-
-echo "! dir = $dir"
 
 if ! git -C "$dir" merge-base --is-ancestor $commit1 $commit2
 then
