@@ -3,15 +3,33 @@
 commit1=`echo "$1" | grep -Po '^[^:]*'`
 commit2=`echo "$1" | grep -Po '(?<=:).*$'`
 path=$2
+realpath=`readlink -m $path`
 
-if ! git -C `dirname "$path"` merge-base --is-ancestor $commit1 $commit2
+echo "! realpath = $realpath"
+
+if [ ${path: -1} = "/" ]
+then
+	dir=$realpath"/"
+else
+	dir=`dirname $realpath`
+fi
+
+echo "! dir = $dir"
+
+if ! git -C "$dir" merge-base --is-ancestor $commit1 $commit2
 then
 	echo "$commit1 is not ancestor of $commit2"
 	exit 1
 fi
 
-for f in `find $path`
+for f in `find $realpath -not \( -path $dir.git -prune \)`
 do
-	echo -n "$f "
-	git -C `dirname "$path"` log -p -w --word-diff -U0 $commit1..$commit2 -- $f | tr -d '\r' | grep -Poc '\[\-.+?\-\]\{\+.+?\+\}|\{\+.+?\+\}|\[\-.+?\-\]'
+	normal_f=${f#$realpath}
+	count=`git -C $dir log -p -w --word-diff -U0 $commit1..$commit2 -- $f | tr -d '\r' | grep -Poc '\[\-.+?\-\]\{\+.+?\+\}|\{\+.+?\+\}|\[\-.+?\-\]'`
+	if [ $? ]
+	then
+		echo "$normal_f $count"
+	else
+		echo "$normal_f ERROR"
+	fi
 done
