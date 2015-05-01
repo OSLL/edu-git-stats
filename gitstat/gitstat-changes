@@ -3,8 +3,21 @@
 commit1=`echo "$1" | grep -Po '^[^:]*'`
 commit2=`echo "$1" | grep -Po '(?<=:).*$'`
 path=$2
-realpath=`readlink -m $path`
 
+shift; shift
+
+show_zeros=
+while (( "$#" ))
+do
+	case $1 in
+		-a|--all)
+			show_zeros=y
+			shift
+			;;
+	esac
+done
+
+realpath=`readlink -m $path`
 if [ ${path: -1} = "/" ]
 then
 	dir=$realpath"/"
@@ -24,7 +37,10 @@ do
 	count=`git -C $dir log -p -w --word-diff -U0 $commit1..$commit2 -- $f | tr -d '\r' | grep -Poc '\[\-.+?\-\]\{\+.+?\+\}|\{\+.+?\+\}|\[\-.+?\-\]'`
 	if [ $? ]
 	then
-		echo "$normal_f $count"
+		if [ "$show_zeros" == "y" ] || (( count > 0 ))
+		then
+			echo "$normal_f $count"
+		fi
 	else
 		echo "$normal_f ERROR"
 	fi
