@@ -42,8 +42,11 @@ def ProcessLog(path, commit1, commit2):
             j += 1
         while i < len(word_diff) and word_diff[i][0:2] == "@@":
             find = re.search("(?<=@@ )-(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))?(?= @@)", word_diff[i]).groups()
-            print("!", find, file=sys.stderr)
-
+            old_pos = int(find[0])
+            old_len = int(find[1]) if not find[1] is None else 0
+            new_pos = int(find[2])
+            new_len = int(find[3]) if not find[3] is None else 0
+            print("!", (old_pos, old_len, new_pos, new_len), file=sys.stderr)
             i += 1
             j += 1
             while i < len(word_diff) and word_diff[i][0:2] != "@@" and word_diff[i][0:6] != "commit":
