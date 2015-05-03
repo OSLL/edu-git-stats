@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from random import random
 
 class Treap:
