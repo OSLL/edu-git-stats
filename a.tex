@@ -1,0 +1,269 @@
+\documentclass{beamer}
+
+\usepackage{polyglossia}
+\usepackage{fontspec}
+\usepackage{nameref}
+\usepackage{ifthen}
+\usepackage{minted}
+\usepackage[math-style=ISO,vargreek-shape=unicode]{unicode-math}
+
+\setdefaultlanguage[spelling=modern,babelshorthands=true]{russian}
+\setotherlanguage{english}
+
+\defaultfontfeatures{Ligatures={TeX}}
+\setmainfont{CMU Serif}
+\setsansfont{CMU Sans Serif}
+\setmonofont{CMU Typewriter Text}  
+\setmathfont{Latin Modern Math}
+\AtBeginDocument{\renewcommand{\setminus}{\mathbin{\backslash}}}
+
+\makeatletter
+\newcommand*{\currentname}{\@currentlabelname}
+\makeatother
+\def\t{\texttt}
+
+\newcommand{\cimg}[2]{%
+	\begin{center}%
+		\ifthenelse{\equal{#2}{}}{%
+			\includegraphics[width=0.75\linewidth]{#1}
+		}{%
+			\includegraphics[width=#2\linewidth]{#1}
+		}%
+	\end{center}%
+}
+
+\newmintinline[cinl]{c}{} %\c is defined :(
+\newmintinline[cpp]{cpp}{}
+\newmintinline[python]{python}{}
+\newmintinline[bash]{bash}{}
+\newmintinline[make]{make}{}
+\setminted{obeytabs,tabsize=4,linenos,autogobble}
+\newminted{c}{}
+\newminted{cpp}{}
+\newminted{python}{}
+\newminted{bash}{}
+\newminted{make}{}
+
+\usetheme{Antibes}
+\useoutertheme{infolines_foot}
+\setbeamercovered{transparent=20}
+
+\title[gitstat]{gitstat \\ Анализ и статистика по истории \t{git}}
+\author[Лапшин Дмитрий]{Лапшин Дмитрий \\ Руководитель: Кринкин Кирилл Владимирович}
+\institute{СПб НИАУ РАН}
+\date{Весна 2015}
+
+\begin{document}
+
+\begin{frame}
+	\titlepage
+\end{frame}
+
+\section{Содержание}
+
+\begin{frame}[t]{\currentname}
+	\tableofcontents
+\end{frame}
+
+\section{Цели и задачи проекта}
+
+\subsection{Цель проекта}
+
+\begin{frame}[t]{\currentname}
+	Реализовать анализатор, находящий в проекте проблемные места, исходя из истории проекта, отслеживаемой системой контроля версий \t{git}.
+	\cimg{git.jpg}{0.5}
+\end{frame}
+
+\subsection{Задачи проекта}
+
+\begin{frame}[t,fragile]{\currentname}
+	\begin{enumerate}[<+->]
+	\item
+		Изучить систему контроля версий \t{git}, как она составляет изменения (\bash'git diff').
+	\item
+		Сбор истории файлов и строк из \t{git} (\bash'git show', \bash'git log', \bash'git blame', ...).
+	\item
+		Метод поиска проблемных строк в проекте на выданном диапазоне истории.
+	\item
+		Реализация анализатора файла, папки.
+	\item
+		Визуализация.
+	\end{enumerate}
+\end{frame}
+
+\subsection{Проблемные строки}
+
+\begin{frame}[t,fragile]{\currentname}
+	\begin{cppcode}
+		// 1 revision:
+		double const g = 9.8;
+	\end{cppcode}
+	\begin{cppcode}
+		// this day later:
+		double const g = 9.80665;
+	\end{cppcode}
+	\begin{cppcode}
+		// the day after:
+		double const g = 10;
+	\end{cppcode}
+	\begin{cppcode}
+		// next week:
+		double const g = 2;
+	\end{cppcode}
+	\begin{itemize}
+	\item<2->
+		\textit{Не зная}, что означает \cpp'double const g', \textit{видно}, что что-то не так.
+	\item<3->
+		Это не видно, если смотреть только на \textit{текущую} версию кода.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[t]{\currentname}
+	\begin{itemize}
+	\item<1->
+		Проблемной имеет смысл назвать строку, которая за малое количество раз много менялась.
+	\item<2->
+		Если строку целиком заменили, удалили или добавили "--- это не интересно.
+	\item<3->
+		Строки сдвигаются по нумерации, но это их не меняет.
+	\end{itemize}
+	\pause[4]
+	В качестве текущей характеристики <<проблемности>> строки "--- сколько суммарно изменений внутри строки произошло.
+\end{frame}
+
+\section{Деятельность}
+
+\subsection{\t{git}}
+
+\begin{frame}[t]{\currentname}
+	В начале догло исследловался сам \t{git}, чтобы понять, что можно использовать прямо из \t{git}.
+	\pause
+	\begin{itemize}
+	\item
+		В качестве основной команды вывода истории используется стандартная \bash'git log' с кучей полезных флагов.
+		\pause
+	\item
+		Параллельно с ней использовался другой вызов \bash'git log --word-diff', который выделяет извенения именно внутри строк.
+		\pause
+	\item
+		Отслеживать историю конкретной строки \t{git} не умеет.
+		\pause
+	\item
+		Для обхода этого анализатор разбирает вывод \bash'git log' и проходтися с помощью структуры \t{rope}
+		(использовалось декартого дерево, \t{treap}).
+	\end{itemize}
+\end{frame}
+
+\subsection{Объединение и разделение строк}
+
+\begin{frame}[t,fragile]{\currentname}
+	\t{word-diff} иногда начинает объединять или разделять строки:
+	\pause
+	\begin{ccode}
+		r = ioctl(hdev->control, VHOST_SET_LOG_BASE, // Enter
+		          (uint64_t)(unsigned long)hdev->log);
+	\end{ccode}
+	\pause
+	\begin{minted}[linenos=false]{c}
+		r = hdev->vhost_ops->vhost_call(hdev, VHOST_SET_LOG_BASE,
+			hdev->log); // Одна строка
+	\end{minted}
+	\pause
+	\visible<4->{
+		\cimg{pain-2.png}{1}
+	}
+	\pause
+	\visible<5->{
+		\cimg{pain-1.png}{1}
+	}
+	\pause
+	Пока с этим разобраться не удалось.
+\end{frame}
+
+\section{Результаты}
+\subsection{Что удалось}
+
+\begin{frame}[t]{\currentname}
+	\pause
+	\begin{itemize}
+	\item
+		Разобраться, как \t{git} работает с историей на довольно глубоком уровне.
+		\pause
+	\item
+		Разобрать крайне сложно устроенный вывод.
+		\pause
+	\item
+		Реализация подсчёта изменений в одном файле реализована и работает, пока не налетает на ошибку выше.
+	\end{itemize}
+\end{frame}
+
+\subsection{Что ещё не удалось}
+
+\begin{frame}[t]{\currentname}
+	Большинство этих задач можно решить в ближайшем будущем:
+	\pause
+	\begin{itemize}
+	\item
+		Анализировать сразу папки.
+		\pause
+	\item
+		Разобрать анализ \t{git}-ом фрагментов как выше.
+		\pause
+	\item
+		Визуализатор.
+	\end{itemize}
+\end{frame}
+
+\subsection{Выводы}
+
+\begin{frame}[t]{\currentname}
+	\pause
+	\begin{itemize}
+	\item
+		\begin{quote}
+			git --- stupid container tracker
+		\end{quote}
+		\t{git} действительно мало понимает в отслеживаемых файлах.
+		Для лучшего анализа его необходимо настраивать на каждый формат файла, который он хранит.
+		\pause
+	\item
+		Тем не менее, \t{git} "--- очень мощная система с множеством опций и методов модификации.
+		\pause
+	\item
+		Задача анализа истории по \t{git} действительно сложна, но решаема.
+		\pause
+	\item
+		Python "--- великолепный язык для взаимодействия с командами и их выводами.
+	\end{itemize}
+\end{frame}
+
+\subsection{Чему я научлся}
+
+\begin{frame}[t]{\currentname}
+	\pause
+	\begin{itemize}
+	\item
+		Глубокая работа с \t{git}.
+		\pause
+	\item
+		Чтение большого объёма непонятной документации, которую никто не читает.
+		\pause
+	\item
+		Регулярные выражения
+		\pause
+	\item
+
+	\end{itemize}
+\end{frame}
+
+\section{}
+
+\begin{frame}
+	\begin{center}
+		Спасибо за внимание.
+
+		Репозиторий: \url{https://github.com/OSLL/edu-git-stats}
+	\end{center}
+\end{frame}
+
+\end{document}
