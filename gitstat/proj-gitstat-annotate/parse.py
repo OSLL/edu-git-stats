@@ -9,7 +9,7 @@ import treap
 
 def NormalizeString(str):
     # Dumb one!
-    return re.subn("([ \t])[ \t]+", "\1", str)[0]
+    return " " + " ".join(re.split("[ \t\n]+", str)) + " "
 
 def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start, old_len, new_start, new_len, root):
     word_diff_len = max(old_len, new_len)
@@ -44,6 +44,7 @@ def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start,
 
         full_diff_old_line = full_diff_new_line = ""
         is_in_old = is_in_new = False
+        full_diff_old_len = full_diff_new_len = 0
         if old_pos < old_len:
             full_diff_old_line = NormalizeString(full_diff[full_diff_pos + old_pos][1:-1])
             full_diff_old_len = 1
@@ -68,12 +69,12 @@ def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start,
 
         print("!! %d:\n!!    \"%s\"\n!!    \"%s\"" % (i, word_diff_old_line.replace("\r", "\\r").replace("\n", "\\n"), word_diff_new_line.replace("\r", "\\r").replace("\n", "\\n")))
         print(
-            "!! X  \"%s\" %d %d\n!! X  \"%s\" %d %d" %
+            "!! X  \"%s\" %d %d (took %d)\n!! X  \"%s\" %d %d (took %d)" %
             (
                 full_diff_old_line.replace("\r", "\\r").replace("\n", "\\n"),
-                full_diff_old_line == word_diff_old_line, is_in_old,
+                full_diff_old_line == word_diff_old_line, is_in_old, full_diff_old_len,
                 full_diff_new_line.replace("\r", "\\r").replace("\n", "\\n"),
-                full_diff_new_line == word_diff_new_line, is_in_new
+                full_diff_new_line == word_diff_new_line, is_in_new, full_diff_new_len
             )
         )
         assert is_in_old or is_in_new
