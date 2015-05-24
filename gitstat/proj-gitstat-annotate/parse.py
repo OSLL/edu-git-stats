@@ -24,7 +24,7 @@ def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start,
 
     i = 0
     while old_pos < old_len or new_pos < new_len:
-        print("!!! old: %d/%d new:%d/%d" % (old_pos, old_len, new_pos, new_len))
+        # print("!!! old: %d/%d new:%d/%d" % (old_pos, old_len, new_pos, new_len))
         word_diff_old_line = word_diff_new_line = ""
         changes = 0
         was_prev_del = False
@@ -67,25 +67,25 @@ def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start,
                 is_in_new = True
                 new_pos += full_diff_new_len
 
-        print("!! %d:\n!!    \"%s\"\n!!    \"%s\"" % (i, word_diff_old_line.replace("\r", "\\r").replace("\n", "\\n"), word_diff_new_line.replace("\r", "\\r").replace("\n", "\\n")))
-        print(
-            "!! X  \"%s\" %d %d (took %d)\n!! X  \"%s\" %d %d (took %d)" %
-            (
-                full_diff_old_line.replace("\r", "\\r").replace("\n", "\\n"),
-                full_diff_old_line == word_diff_old_line, is_in_old, full_diff_old_len,
-                full_diff_new_line.replace("\r", "\\r").replace("\n", "\\n"),
-                full_diff_new_line == word_diff_new_line, is_in_new, full_diff_new_len
-            )
-        )
+        # print("!! %d:\n!!    \"%s\"\n!!    \"%s\"" % (i, word_diff_old_line.replace("\r", "\\r").replace("\n", "\\n"), word_diff_new_line.replace("\r", "\\r").replace("\n", "\\n")))
+        # print(
+        #     "!! X  \"%s\" %d %d (took %d)\n!! X  \"%s\" %d %d (took %d)" %
+        #     (
+        #         full_diff_old_line.replace("\r", "\\r").replace("\n", "\\n"),
+        #         full_diff_old_line == word_diff_old_line, is_in_old, full_diff_old_len,
+        #         full_diff_new_line.replace("\r", "\\r").replace("\n", "\\n"),
+        #         full_diff_new_line == word_diff_new_line, is_in_new, full_diff_new_len
+        #     )
+        # )
         assert is_in_old or is_in_new
-        print(
-            "! %s -> %s, %s" %
-            (
-                str(old_start + old_pos) if is_in_old else "/dev/null",
-                str(new_start + new_pos) if is_in_new else "/dev/null",
-                changes
-            )
-        )
+        # print(
+        #     "! %s -> %s, %s" %
+        #     (
+        #         str(old_start + old_pos) if is_in_old else "/dev/null",
+        #         str(new_start + new_pos) if is_in_new else "/dev/null",
+        #         changes
+        #     )
+        # )
         if is_in_old:
             treap_old_row, treap_old = treap.Split(treap_old, 1)
             if is_in_new:
@@ -134,7 +134,7 @@ def ProcessLog(path, commit1, commit2):
         commit_id2 = re.search("(?<=commit )[a-z0-9]+", full_diff[j]).group()
         if commit_id1 != commit_id2:
             exit("Unmatched commits")
-        print(commit_id1)
+        # print(commit_id1)
         i += 1
         j += 1
         while i < len(word_diff) and word_diff[i][0:2] != "@@" and word_diff[i][0:6] != "commit":
@@ -146,7 +146,7 @@ def ProcessLog(path, commit1, commit2):
             old_len = int(find[1]) if not find[1] is None else 1
             new_pos = int(find[2])
             new_len = int(find[3]) if not find[3] is None else 1
-            print("!", (old_pos, old_len, new_pos, new_len))
+            # print("!", (old_pos, old_len, new_pos, new_len))
             i += 1
             j += 1
             root = ProcessCommit(word_diff, full_diff, i, j, old_pos, old_len, new_pos, new_len, root)
