@@ -7,6 +7,10 @@ import subprocess
 import treap
 
 
+def NormalizeString(str):
+    # Dumb one!
+    return re.subn("([ \t])[ \t]+", "\1", str)[0]
+
 def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start, old_len, new_start, new_len, root):
     word_diff_len = max(old_len, new_len)
     old_pos = 0
@@ -20,46 +24,67 @@ def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start,
 
     i = 0
     while old_pos < old_len or new_pos < new_len:
-        old_line = new_line = ""
+        print("!!! old: %d/%d new:%d/%d" % (old_pos, old_len, new_pos, new_len))
+        word_diff_old_line = word_diff_new_line = ""
         changes = 0
         was_prev_del = False
         while word_diff[word_diff_pos + i] != "~\n":
             next_line = word_diff[word_diff_pos + i]
             i += 1
             if next_line[0] != '+':
-                old_line += next_line[1:-1]
+                word_diff_old_line += next_line[1:-1]
             elif was_prev_del:
                 changes += 1
             if next_line[0] != '-':
-                new_line += next_line[1:-1]
+                word_diff_new_line += next_line[1:-1]
             was_prev_del = next_line[0] == '-'
         i += 1
-        old_line += '\n'
-        new_line += '\n'
-        # print("!! %d:\n!!    \"%s\"\n!!    \"%s\"" % (i, old_line.replace("\r", "\\r").replace("\n", "\\n"), new_line.replace("\r", "\\r").replace("\n", "\\n")))
-        # print(
-        #     "!! X  \"%s\" %d\n!! X  \"%s\" %d" %
-        #     (
-        #         full_diff[full_diff_pos + old_pos][1:].replace("\r", "\\r").replace("\n", "\\n"),
-        #         full_diff[full_diff_pos + old_pos][1:] == old_line,
-        #         full_diff[full_diff_pos + old_len + new_pos][1:].replace("\r", "\\r").replace("\n", "\\n"),
-        #         full_diff[full_diff_pos + old_len + new_pos][1:] == new_line
-        #     )
-        # )
+        word_diff_old_line = NormalizeString(word_diff_old_line)
+        word_diff_new_line = NormalizeString(word_diff_new_line)
+
+        full_diff_old_line = full_diff_new_line = ""
         is_in_old = is_in_new = False
-        if old_pos < old_len and full_diff[full_diff_pos + old_pos][1:] == old_line:
-            is_in_old = True
-        if new_pos < new_len and full_diff[full_diff_pos + old_len + new_pos][1:] == new_line:
-            is_in_new = True
+        if old_pos < old_len:
+            full_diff_old_line = NormalizeString(full_diff[full_diff_pos + old_pos][1:-1])
+            full_diff_old_len = 1
+            while len(full_diff_old_line) < len(word_diff_old_line) and full_diff_old_line == word_diff_old_line[:len(full_diff_old_line)]:
+                full_diff_old_line += full_diff[full_diff_pos + old_pos + full_diff_old_len][1:-1]
+                full_diff_old_line = NormalizeString(full_diff_old_line)
+                full_diff_old_len += 1
+            if full_diff_old_line == word_diff_old_line:
+                is_in_old = True
+                old_pos += full_diff_old_len
+
+        if new_pos < new_len:
+            full_diff_new_line = NormalizeString(full_diff[full_diff_pos + old_len + new_pos][1:-1])
+            full_diff_new_len = 1
+            while len(full_diff_new_line) < len(word_diff_new_line) and full_diff_new_line == word_diff_new_line[:len(full_diff_new_line)]:
+                full_diff_new_line += full_diff[full_diff_pos + old_len + new_pos + full_diff_new_len][1:-1]
+                full_diff_new_line = NormalizeString(full_diff_new_line)
+                full_diff_new_len += 1
+            if full_diff_new_line == word_diff_new_line:
+                is_in_new = True
+                new_pos += full_diff_new_len
+
+        print("!! %d:\n!!    \"%s\"\n!!    \"%s\"" % (i, word_diff_old_line.replace("\r", "\\r").replace("\n", "\\n"), word_diff_new_line.replace("\r", "\\r").replace("\n", "\\n")))
+        print(
+            "!! X  \"%s\" %d %d\n!! X  \"%s\" %d %d" %
+            (
+                full_diff_old_line.replace("\r", "\\r").replace("\n", "\\n"),
+                full_diff_old_line == word_diff_old_line, is_in_old,
+                full_diff_new_line.replace("\r", "\\r").replace("\n", "\\n"),
+                full_diff_new_line == word_diff_new_line, is_in_new
+            )
+        )
         assert is_in_old or is_in_new
-        # print(
-        #     "! %s -> %s, %s" %
-        #     (
-        #         str(old_start + old_pos) if is_in_old else "/dev/null",
-        #         str(new_start + new_pos) if is_in_new else "/dev/null",
-        #         changes
-        #     )
-        # )
+        print(
+            "! %s -> %s, %s" %
+            (
+                str(old_start + old_pos) if is_in_old else "/dev/null",
+                str(new_start + new_pos) if is_in_new else "/dev/null",
+                changes
+            )
+        )
         if is_in_old:
             treap_old_row, treap_old = treap.Split(treap_old, 1)
             if is_in_new:
@@ -67,10 +92,6 @@ def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start,
                 treap_new = treap.Merge(treap_new, treap_old_row)
         if is_in_new and not is_in_old:
             treap_new = treap.Merge(treap_new, treap.Treap())
-        if is_in_old:
-            old_pos += 1
-        if is_in_new:
-            new_pos += 1
 
     # print("!! final size = %d" % treap.Size(treap_new))
     root = treap.Merge(treap_head, treap.Merge(treap_new, treap_tail))
@@ -112,7 +133,7 @@ def ProcessLog(path, commit1, commit2):
         commit_id2 = re.search("(?<=commit )[a-z0-9]+", full_diff[j]).group()
         if commit_id1 != commit_id2:
             exit("Unmatched commits")
-        # print(commit_id1)
+        print(commit_id1)
         i += 1
         j += 1
         while i < len(word_diff) and word_diff[i][0:2] != "@@" and word_diff[i][0:6] != "commit":
@@ -124,7 +145,7 @@ def ProcessLog(path, commit1, commit2):
             old_len = int(find[1]) if not find[1] is None else 1
             new_pos = int(find[2])
             new_len = int(find[3]) if not find[3] is None else 1
-            # print("!", (old_pos, old_len, new_pos, new_len))
+            print("!", (old_pos, old_len, new_pos, new_len))
             i += 1
             j += 1
             root = ProcessCommit(word_diff, full_diff, i, j, old_pos, old_len, new_pos, new_len, root)
