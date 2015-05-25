@@ -4,6 +4,7 @@ from random import random
 class Treap:
     def __init__(self, value=0):
         self.value = value
+        self.sum = value
         self.y = random()
         self.id = 1
         self.size = 1
@@ -12,6 +13,7 @@ class Treap:
     def Normalize(self):
         self.id = self.size = 1 + Size(self.left)
         self.size += Size(self.right)
+        self.sum = self.value + Sum(self.left) + Sum(self.right)
 
 
 def Size(node):
@@ -19,6 +21,11 @@ def Size(node):
         return 0
     return node.size
 
+
+def Sum(node):
+    if node is None:
+        return 0
+    return node.sum
 
 def Split(node, x):
     if node is None:
@@ -48,10 +55,10 @@ def Merge(left, right):
         return right
 
 
-def Build(n):
+def Build(n, value=None):
     root = None
     for i in range(1, n + 1):
-        root = Merge(root, Treap())
+        root = Merge(root, Treap(value or 0))
     return root
 
 

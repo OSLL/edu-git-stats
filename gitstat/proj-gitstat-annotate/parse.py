@@ -87,12 +87,12 @@ def ProcessCommit(word_diff, full_diff, word_diff_pos, full_diff_pos, old_start,
         #     )
         # )
         if is_in_old:
-            treap_old_row, treap_old = treap.Split(treap_old, 1)
+            treap_old_row, treap_old = treap.Split(treap_old, full_diff_old_len)
             if is_in_new:
-                treap_old_row.value += changes
-                treap_new = treap.Merge(treap_new, treap_old_row)
+                sum_value = treap.Sum(treap_old_row) + changes
+                treap_new = treap.Merge(treap_new, treap.Build(full_diff_new_len, sum_value / full_diff_new_len))
         if is_in_new and not is_in_old:
-            treap_new = treap.Merge(treap_new, treap.Treap())
+            treap_new = treap.Merge(treap_new, treap.Build(full_diff_new_len))
 
     # print("!! final size = %d" % treap.Size(treap_new))
     root = treap.Merge(treap_head, treap.Merge(treap_new, treap_tail))
